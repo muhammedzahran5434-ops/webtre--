@@ -1,0 +1,368 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================
+    // GLOBAL HARDENED PRIMITIVES
+    // =========================================================
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'muhammedzahran5434@gmail.com' ||
+        request.auth.token.email == 'webtrex@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isNonEmptyString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isOptionalString(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+
+    function isValidEmail(val) {
+      return val is string && val.size() >= 5 && val.size() <= 254 && val.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$');
+    }
+
+    // =========================================================
+    // ENTITY VALIDATION BLUEPRINTS
+    // =========================================================
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'status', 'notificationsEnabled', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'company', 'phone', 'bio', 'role', 'status', 'notificationsEnabled', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && isValidEmail(data.email)
+        && isNonEmptyString(data.displayName, 1, 100)
+        && (!('company' in data) || isOptionalString(data.company, 120))
+        && (!('phone' in data) || isOptionalString(data.phone, 40))
+        && (!('bio' in data) || isOptionalString(data.bio, 500))
+        && data.role in ['client', 'admin']
+        && data.status in ['active', 'suspended']
+        && data.notificationsEnabled is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['uid', 'email', 'grantedBy', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'email', 'grantedBy', 'createdAt'])
+        && isValidId(data.uid)
+        && isValidEmail(data.email)
+        && isNonEmptyString(data.grantedBy, 1, 128)
+        && data.createdAt is timestamp;
+    }
+
+    function isValidServiceItem(data) {
+      return data.keys().hasAll(['title', 'description', 'icon', 'deliverables', 'order', 'active', 'updatedAt'])
+        && data.keys().hasOnly(['title', 'description', 'icon', 'deliverables', 'order', 'active', 'updatedAt'])
+        && isNonEmptyString(data.title, 2, 100)
+        && isNonEmptyString(data.description, 10, 500)
+        && data.icon in ['globe', 'smartphone', 'layers', 'shopping-bag', 'cpu', 'wrench', 'code', 'shield']
+        && data.deliverables is list
+        && data.deliverables.size() <= 8
+        && (data.deliverables.size() == 0 || (data.deliverables[0] is string && data.deliverables[0].size() <= 120))
+        && data.order is number
+        && data.order >= 0 && data.order <= 1000
+        && data.active is bool
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPortfolioProject(data) {
+      return data.keys().hasAll(['title', 'category', 'description', 'clientType', 'isDemo', 'imageUrl', 'highlights', 'order', 'updatedAt'])
+        && data.keys().hasOnly(['title', 'category', 'description', 'clientType', 'isDemo', 'imageUrl', 'highlights', 'liveUrl', 'order', 'updatedAt'])
+        && isNonEmptyString(data.title, 2, 120)
+        && data.category in ['Websites', 'Applications', 'UI/UX']
+        && isNonEmptyString(data.description, 10, 600)
+        && isOptionalString(data.clientType, 100)
+        && data.isDemo is bool
+        && isOptionalString(data.imageUrl, 500)
+        && data.highlights is list
+        && data.highlights.size() <= 6
+        && (data.highlights.size() == 0 || (data.highlights[0] is string && data.highlights[0].size() <= 120))
+        && (!('liveUrl' in data) || isOptionalString(data.liveUrl, 300))
+        && data.order is number
+        && data.order >= 0 && data.order <= 1000
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTeamMember(data) {
+      return data.keys().hasAll(['name', 'role', 'bio', 'photoUrl', 'order', 'updatedAt'])
+        && data.keys().hasOnly(['name', 'role', 'bio', 'photoUrl', 'linkedinUrl', 'githubUrl', 'xUrl', 'order', 'updatedAt'])
+        && isNonEmptyString(data.name, 2, 100)
+        && isNonEmptyString(data.role, 2, 100)
+        && isNonEmptyString(data.bio, 5, 400)
+        && isOptionalString(data.photoUrl, 500)
+        && (!('linkedinUrl' in data) || isOptionalString(data.linkedinUrl, 300))
+        && (!('githubUrl' in data) || isOptionalString(data.githubUrl, 300))
+        && (!('xUrl' in data) || isOptionalString(data.xUrl, 300))
+        && data.order is number
+        && data.order >= 0 && data.order <= 1000
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSiteContent(data) {
+      return data.keys().hasAll(['heroHeadline', 'heroDescription', 'aboutHeadline', 'aboutDescription', 'mission', 'vision', 'values', 'contactEmail', 'contactPhone', 'contactLocation', 'businessHours', 'updatedAt'])
+        && data.keys().hasOnly(['heroHeadline', 'heroDescription', 'aboutHeadline', 'aboutDescription', 'mission', 'vision', 'values', 'contactEmail', 'contactPhone', 'contactLocation', 'businessHours', 'updatedAt'])
+        && isNonEmptyString(data.heroHeadline, 5, 180)
+        && isNonEmptyString(data.heroDescription, 10, 400)
+        && isNonEmptyString(data.aboutHeadline, 5, 180)
+        && isNonEmptyString(data.aboutDescription, 10, 600)
+        && isNonEmptyString(data.mission, 10, 400)
+        && isNonEmptyString(data.vision, 10, 400)
+        && isNonEmptyString(data.values, 10, 400)
+        && isNonEmptyString(data.contactEmail, 5, 150)
+        && isOptionalString(data.contactPhone, 60)
+        && isOptionalString(data.contactLocation, 150)
+        && isOptionalString(data.businessHours, 120)
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidProjectRequest(data) {
+      return data.keys().hasAll(['userId', 'userEmail', 'userName', 'title', 'projectType', 'budget', 'timeline', 'details', 'status', 'adminNotes', 'progress', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['userId', 'userEmail', 'userName', 'title', 'projectType', 'budget', 'timeline', 'details', 'status', 'adminNotes', 'progress', 'createdAt', 'updatedAt'])
+        && isValidId(data.userId)
+        && isValidEmail(data.userEmail)
+        && isNonEmptyString(data.userName, 1, 100)
+        && isNonEmptyString(data.title, 3, 140)
+        && isNonEmptyString(data.projectType, 2, 80)
+        && isOptionalString(data.budget, 60)
+        && isOptionalString(data.timeline, 60)
+        && isNonEmptyString(data.details, 10, 2000)
+        && data.status in ['pending', 'in-review', 'approved', 'in-progress', 'completed', 'declined']
+        && isOptionalString(data.adminNotes, 1000)
+        && data.progress is number
+        && data.progress >= 0 && data.progress <= 100
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidContactMessage(data) {
+      return data.keys().hasAll(['fullName', 'email', 'projectType', 'budget', 'details', 'userId', 'status', 'replyMessage', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['fullName', 'email', 'projectType', 'budget', 'details', 'userId', 'status', 'replyMessage', 'createdAt', 'updatedAt'])
+        && isNonEmptyString(data.fullName, 2, 100)
+        && isValidEmail(data.email)
+        && isNonEmptyString(data.projectType, 2, 80)
+        && isOptionalString(data.budget, 60)
+        && isNonEmptyString(data.details, 10, 2000)
+        && isOptionalString(data.userId, 128)
+        && data.status in ['new', 'read', 'replied', 'archived']
+        && isOptionalString(data.replyMessage, 2000)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidClientProject(data) {
+      return data.keys().hasAll(['userId', 'userEmail', 'name', 'category', 'phase', 'progress', 'nextMilestone', 'previewUrl', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['userId', 'userEmail', 'name', 'category', 'phase', 'progress', 'nextMilestone', 'previewUrl', 'createdAt', 'updatedAt'])
+        && isValidId(data.userId)
+        && isValidEmail(data.userEmail)
+        && isNonEmptyString(data.name, 2, 140)
+        && isNonEmptyString(data.category, 2, 80)
+        && data.phase in ['Discovery', 'Design', 'Development', 'Testing', 'Launched']
+        && data.progress is number
+        && data.progress >= 0 && data.progress <= 100
+        && isOptionalString(data.nextMilestone, 200)
+        && isOptionalString(data.previewUrl, 300)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // =========================================================
+    // COLLECTION MATCH BLOCKS
+    // =========================================================
+
+    // 1. Users (PII isolated to owner or admin)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().role == 'client'
+        && incoming().status == 'active'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn()
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            isOwner(userId)
+            && incoming().role == existing().role
+            && incoming().status == existing().status
+            && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'company', 'phone', 'bio', 'notificationsEnabled', 'email', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // 2. Admins (Trusted Role Registry)
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId)
+        && isAdmin()
+        && isValidAdminRecord(incoming())
+        && incoming().uid == userId
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // 3. Services (Public Read, Admin Write)
+    match /services/{serviceId} {
+      allow get: if isValidId(serviceId);
+      allow list: if true;
+      allow create, update: if isValidId(serviceId)
+        && isAdmin()
+        && isValidServiceItem(incoming())
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(serviceId) && isAdmin();
+    }
+
+    // 4. Portfolio Projects (Public Read, Admin Write)
+    match /projects/{projectId} {
+      allow get: if isValidId(projectId);
+      allow list: if true;
+      allow create, update: if isValidId(projectId)
+        && isAdmin()
+        && isValidPortfolioProject(incoming())
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(projectId) && isAdmin();
+    }
+
+    // 5. Team Members (Public Read, Admin Write)
+    match /team_members/{memberId} {
+      allow get: if isValidId(memberId);
+      allow list: if true;
+      allow create, update: if isValidId(memberId)
+        && isAdmin()
+        && isValidTeamMember(incoming())
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(memberId) && isAdmin();
+    }
+
+    // 6. Site Content (Public Read, Admin Write)
+    match /site_content/{docId} {
+      allow get: if isValidId(docId);
+      allow list: if true;
+      allow create, update: if isValidId(docId)
+        && isAdmin()
+        && isValidSiteContent(incoming())
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    // 7. Project Requests (Owner or Admin Read, Verified Owner Create, Action-Based Update)
+    match /project_requests/{requestId} {
+      allow get: if isValidId(requestId) && (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isValidId(requestId)
+        && isVerifiedUser()
+        && isValidProjectRequest(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'pending'
+        && incoming().adminNotes == ''
+        && incoming().progress == 0
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(requestId)
+        && isSignedIn()
+        && isValidProjectRequest(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            isVerifiedUser()
+            && existing().userId == request.auth.uid
+            && existing().status == 'pending'
+            && incoming().status == existing().status
+            && incoming().adminNotes == existing().adminNotes
+            && incoming().progress == existing().progress
+            && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'projectType', 'budget', 'timeline', 'details', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(requestId)
+        && (isAdmin() || (isVerifiedUser() && existing().userId == request.auth.uid && existing().status == 'pending'));
+    }
+
+    // 8. Contact Messages (Public Create, Owner/Admin Read, Admin Update/Delete)
+    match /contact_messages/{messageId} {
+      allow get: if isValidId(messageId) && (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isValidId(messageId)
+        && isValidContactMessage(incoming())
+        && incoming().status == 'new'
+        && incoming().replyMessage == ''
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          (isSignedIn() && incoming().userId == request.auth.uid) ||
+          (!isSignedIn() && incoming().userId == '')
+        );
+      allow update: if isValidId(messageId)
+        && isAdmin()
+        && isValidContactMessage(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'replyMessage', 'updatedAt']);
+      allow delete: if isValidId(messageId) && isAdmin();
+    }
+
+    // 9. Client Projects (Owner or Admin Read, Admin Create/Update/Delete)
+    match /client_projects/{clientProjectId} {
+      allow get: if isValidId(clientProjectId) && (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isValidId(clientProjectId)
+        && isAdmin()
+        && isValidClientProject(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(clientProjectId)
+        && isAdmin()
+        && isValidClientProject(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(clientProjectId) && isAdmin();
+    }
+  }
+}

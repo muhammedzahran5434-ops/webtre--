@@ -1,0 +1,200 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Registered WebTrex client or team user account profile.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 254 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "company": { "type": "string", "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "bio": { "type": "string", "maxLength": 500 },
+        "role": { "type": "string", "enum": ["client", "admin"] },
+        "status": { "type": "string", "enum": ["active", "suspended"] },
+        "notificationsEnabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "role", "status", "notificationsEnabled", "createdAt", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted administrator grant record.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 254 },
+        "grantedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "grantedBy", "createdAt"]
+    },
+    "ServiceItem": {
+      "title": "ServiceItem",
+      "description": "Service offering displayed on the WebTrex public site and managed by admins.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "description": { "type": "string", "minLength": 10, "maxLength": 500 },
+        "icon": { "type": "string", "enum": ["globe", "smartphone", "layers", "shopping-bag", "cpu", "wrench", "code", "shield"] },
+        "deliverables": { "type": "array" },
+        "order": { "type": "number" },
+        "active": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "icon", "deliverables", "order", "active", "updatedAt"]
+    },
+    "PortfolioProject": {
+      "title": "PortfolioProject",
+      "description": "Showcase project card displayed in the WebTrex portfolio section.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "category": { "type": "string", "enum": ["Websites", "Applications", "UI/UX"] },
+        "description": { "type": "string", "minLength": 10, "maxLength": 600 },
+        "clientType": { "type": "string", "maxLength": 100 },
+        "isDemo": { "type": "boolean" },
+        "imageUrl": { "type": "string", "maxLength": 500 },
+        "highlights": { "type": "array" },
+        "liveUrl": { "type": "string", "maxLength": 300 },
+        "order": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "category", "description", "clientType", "isDemo", "imageUrl", "highlights", "order", "updatedAt"]
+    },
+    "TeamMember": {
+      "title": "TeamMember",
+      "description": "Editable WebTrex team member profile.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "role": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "bio": { "type": "string", "minLength": 5, "maxLength": 400 },
+        "photoUrl": { "type": "string", "maxLength": 500 },
+        "linkedinUrl": { "type": "string", "maxLength": 300 },
+        "githubUrl": { "type": "string", "maxLength": 300 },
+        "xUrl": { "type": "string", "maxLength": 300 },
+        "order": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "role", "bio", "photoUrl", "order", "updatedAt"]
+    },
+    "SiteContent": {
+      "title": "SiteContent",
+      "description": "Configurable website copy and company contact information.",
+      "type": "object",
+      "properties": {
+        "heroHeadline": { "type": "string", "minLength": 5, "maxLength": 180 },
+        "heroDescription": { "type": "string", "minLength": 10, "maxLength": 400 },
+        "aboutHeadline": { "type": "string", "minLength": 5, "maxLength": 180 },
+        "aboutDescription": { "type": "string", "minLength": 10, "maxLength": 600 },
+        "mission": { "type": "string", "minLength": 10, "maxLength": 400 },
+        "vision": { "type": "string", "minLength": 10, "maxLength": 400 },
+        "values": { "type": "string", "minLength": 10, "maxLength": 400 },
+        "contactEmail": { "type": "string", "minLength": 5, "maxLength": 150 },
+        "contactPhone": { "type": "string", "maxLength": 60 },
+        "contactLocation": { "type": "string", "maxLength": 150 },
+        "businessHours": { "type": "string", "maxLength": 120 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["heroHeadline", "heroDescription", "aboutHeadline", "aboutDescription", "mission", "vision", "values", "contactEmail", "contactPhone", "contactLocation", "businessHours", "updatedAt"]
+    },
+    "ProjectRequest": {
+      "title": "ProjectRequest",
+      "description": "Client-submitted project proposal and inquiry tracked in dashboards.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userEmail": { "type": "string", "maxLength": 254 },
+        "userName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "title": { "type": "string", "minLength": 3, "maxLength": 140 },
+        "projectType": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "budget": { "type": "string", "maxLength": 60 },
+        "timeline": { "type": "string", "maxLength": 60 },
+        "details": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["pending", "in-review", "approved", "in-progress", "completed", "declined"] },
+        "adminNotes": { "type": "string", "maxLength": 1000 },
+        "progress": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userEmail", "userName", "title", "projectType", "budget", "timeline", "details", "status", "adminNotes", "progress", "createdAt", "updatedAt"]
+    },
+    "ContactMessage": {
+      "title": "ContactMessage",
+      "description": "Contact inquiry submitted via the public contact form or client portal.",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "email": { "type": "string", "minLength": 5, "maxLength": 254 },
+        "projectType": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "budget": { "type": "string", "maxLength": 60 },
+        "details": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["new", "read", "replied", "archived"] },
+        "replyMessage": { "type": "string", "maxLength": 2000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fullName", "email", "projectType", "budget", "details", "userId", "status", "replyMessage", "createdAt", "updatedAt"]
+    },
+    "ClientProject": {
+      "title": "ClientProject",
+      "description": "Active client build tracked in the User Dashboard and managed by Admins.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userEmail": { "type": "string", "maxLength": 254 },
+        "name": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "category": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "phase": { "type": "string", "enum": ["Discovery", "Design", "Development", "Testing", "Launched"] },
+        "progress": { "type": "number" },
+        "nextMilestone": { "type": "string", "maxLength": 200 },
+        "previewUrl": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userEmail", "name", "category", "phase", "progress", "nextMilestone", "previewUrl", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user account profiles."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Authorized WebTrex administrators."
+    },
+    "/services/{serviceId}": {
+      "schema": { "$ref": "#/entities/ServiceItem" },
+      "description": "WebTrex service catalog."
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/PortfolioProject" },
+      "description": "WebTrex portfolio showcase items."
+    },
+    "/team_members/{memberId}": {
+      "schema": { "$ref": "#/entities/TeamMember" },
+      "description": "WebTrex team member profiles."
+    },
+    "/site_content/{docId}": {
+      "schema": { "$ref": "#/entities/SiteContent" },
+      "description": "Editable landing page content and company contact details."
+    },
+    "/project_requests/{requestId}": {
+      "schema": { "$ref": "#/entities/ProjectRequest" },
+      "description": "Client project requests."
+    },
+    "/contact_messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ContactMessage" },
+      "description": "Inbound contact form inquiries."
+    },
+    "/client_projects/{clientProjectId}": {
+      "schema": { "$ref": "#/entities/ClientProject" },
+      "description": "Active client delivery projects."
+    }
+  }
+}
